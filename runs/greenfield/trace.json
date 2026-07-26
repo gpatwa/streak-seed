@@ -1,0 +1,20 @@
+{
+  "schema": "agentic-sdlc/trace@1",
+  "slice": "greenfield",
+  "tier": 2,
+  "overlay": false,
+  "landed": true,
+  "started": "2026-07-26T02:00Z",
+  "stages": [
+    { "stage": "Market Research", "model": "sonnet", "tokens": 66400,  "toolCalls": 12, "retries": 0 },
+    { "stage": "PRD",            "model": "sonnet", "tokens": 60899,  "toolCalls": 10, "retries": 0 },
+    { "stage": "UX",             "model": "sonnet", "tokens": 71106,  "toolCalls": 10, "retries": 0 },
+    { "stage": "UI",             "model": "sonnet", "tokens": 77225,  "toolCalls": 8,  "retries": 0 },
+    { "stage": "Architecture",   "model": "opus",   "tokens": 96878,  "toolCalls": 21, "retries": 0 },
+    { "stage": "Implementation", "model": "sonnet", "tokens": 119223, "toolCalls": 38, "retries": 0 },
+    { "stage": "QA",             "model": "sonnet", "tokens": 142330, "toolCalls": 52, "retries": 0 },
+    { "stage": "Security",       "model": "opus",   "tokens": 98661,  "toolCalls": 27, "retries": 0 },
+    { "stage": "Release",        "model": "sonnet", "tokens": 85046,  "toolCalls": 20, "retries": 0 },
+    { "stage": "Post-Launch",    "model": "sonnet", "tokens": 129417, "toolCalls": 25, "retries": 0 }
+  ]
+}
