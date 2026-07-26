@@ -1,0 +1,14 @@
+{
+  "name": "streak-seed",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Headless MVP for StreakKeeper: create a habit, log today's completion (idempotent), and read current/longest streak + at-risk — all derived from one server-side UTC day cutoff.",
+  "scripts": {
+    "typecheck": "for f in $(find src scripts -type f \\( -name '*.js' -o -name '*.mjs' \\)); do node --check \"$f\" || exit 1; done; echo \"typecheck ok\"",
+    "test": "node --test",
+    "build": "node scripts/build-check.mjs",
+    "qa:mvp": "npm run typecheck && npm run test",
+    "start": "node scripts/demo.mjs"
+  }
+}
