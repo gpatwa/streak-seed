@@ -21,6 +21,5 @@ non-daily habits or backfill. Known non-blocking finding: an unvalidated clock
 arg → **required fix before the first HTTP slice** (validate a representable
 date before mutation — not just `isFinite`).
 
-## Open (rule 3)
-Creating / pushing a GitHub repo for StreakKeeper — a human-approval action, not
-taken.
+## Repo
+Pushed (public): https://github.com/gpatwa/streak-seed — rule-3, human-approved.

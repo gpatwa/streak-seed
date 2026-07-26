@@ -3,7 +3,7 @@
 - **Ask:** StreakKeeper — a habit-streak tracker (current/longest streak + at-risk nudge); the streak is a mirror, not a scoreboard.
 - **Project pack:** b2c-saas (greenfield; `.agentic/` authored during this run)
 - **Release tier:** 2 (new product, no external effect yet; a real deploy/GitHub push is a later rule-3 stop)
-- **Current stage:** Landed (local commit `eee59ce`) — Post-Launch complete
+- **Current stage:** Landed — pushed to GitHub (public), Post-Launch complete
 - **Status:** done
 - **Started:** 2026-07-26T02:00Z  ·  **Updated:** 2026-07-26T03:30Z
 
@@ -29,7 +29,7 @@
 
 | Action | Rule | Requested | Decision | Approver | When (UTC) | Record |
 |--------|------|-----------|----------|----------|-----------|--------|
-| Create / push a GitHub repo for StreakKeeper | 3 | not yet | — | — | — | — |
+| Create / push a GitHub repo for StreakKeeper | 3 | yes | **APPROVED** | gpatwa (human) | 2026-07-26T03:40Z | pushed → github.com/gpatwa/streak-seed (public) |
 
 ## Failure budget
 
@@ -74,8 +74,9 @@ Implementation → QA → Security → Release → Post-Launch). One infra pause
 stages vs the 10 × 100k = 1.0M envelope → **within budget, no per-stage cap
 breach** (heaviest stage QA 142k < 150k).
 
-**Open (rule 3):** creating/pushing a GitHub repo for StreakKeeper is a separate
-human-approval action — **not taken**. Carry-forwards + follow-up slices in
+**Pushed to GitHub (rule 3, human-approved):**
+[github.com/gpatwa/streak-seed](https://github.com/gpatwa/streak-seed) (public),
+`c7119c9`. Carry-forwards + follow-up slices in
 `runs/greenfield/10-post-launch.md` (HTTP-layer slice with the clock guard +
 `null` non-oracle; live-engagement measurement; frontend render; playbook
 greenfield-install bootstrap; density baseline split by stage archetype).
