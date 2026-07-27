@@ -385,7 +385,7 @@ src/server.js` as a genuine OS process, not construct a server in-process.
 
 On this machine the non-loopback branch is not hypothetical — it ran for
 real (see gate output below): `os.networkInterfaces()` found `en0
-192.168.86.28`, the same address Security's review used.
+192.168.0.42`, the same address Security's review used.
 
 ### Gate output — real, re-run after the fix
 
@@ -446,7 +446,7 @@ assumed.
 ### Bind evidence — real before/after transcript
 
 Reproduced Security's exact method (`lsof` + a real request from the host's
-actual LAN address, `192.168.86.28`, discovered live via
+actual LAN address, `192.168.0.42`, discovered live via
 `os.networkInterfaces()`, not hardcoded). To get a genuine "before," the
 fixed startup block was temporarily swapped back to the original
 `.listen(port, cb)` (backed up first, restored byte-for-byte after — diffed
@@ -463,13 +463,13 @@ node    49622 gopalpatwa   12u  IPv6 ...  TCP *:41999 (LISTEN)      <- wildcard,
 $ curl http://127.0.0.1:41999/health
 {"status":"ok"}                                                     [http_code=200]
 
-$ curl http://192.168.86.28:41999/health          <- the host's real LAN address
+$ curl http://192.168.0.42:41999/health          <- the host's real LAN address
 {"status":"ok"}                                                     [http_code=200]   <- VULNERABLE
 
-$ curl -X POST http://192.168.86.28:41999/habits -H "x-user-id: alice" -d '{"name":"PrivateHabit"}'
+$ curl -X POST http://192.168.0.42:41999/habits -H "x-user-id: alice" -d '{"name":"PrivateHabit"}'
 {"habit":{"habitId":"habit_1","name":"PrivateHabit", ...}}          [http_code=201]
 
-$ curl http://192.168.86.28:41999/habits -H "x-user-id: alice"
+$ curl http://192.168.0.42:41999/habits -H "x-user-id: alice"
 {"habits":[{"habitId":"habit_1","name":"PrivateHabit", ...}]}       [http_code=200]
 ```
 Created and then read back a user's private data over the LAN address with
@@ -487,8 +487,8 @@ node    49658 gopalpatwa   12u  IPv4 ...  TCP 127.0.0.1:42000 (LISTEN)   <- loop
 $ curl http://127.0.0.1:42000/health
 {"status":"ok"}                                                     [http_code=200]   <- still works
 
-$ curl http://192.168.86.28:42000/health
-curl: (7) Failed to connect to 192.168.86.28 port 42000 after 1 ms: Couldn't connect to server
+$ curl http://192.168.0.42:42000/health
+curl: (7) Failed to connect to 192.168.0.42 port 42000 after 1 ms: Couldn't connect to server
                                                                      [http_code=000 curl_exit=7]  <- FIXED
 ```
 

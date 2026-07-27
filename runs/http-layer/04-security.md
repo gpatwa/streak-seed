@@ -222,7 +222,7 @@ Reached over the host's LAN address, it served a user's data to a self-asserted
 identity header:
 
 ```
-GET /habits   Host: 192.168.86.28:41886   X-User-Id: alice
+GET /habits   Host: 192.168.0.42:41886   X-User-Id: alice
   -> 200 {"habits":[{"habitId":"habit_2","name":"PrivateHabit",...}]}
 ```
 

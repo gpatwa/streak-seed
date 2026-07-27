@@ -28,7 +28,7 @@ objective answer**, not a judgment:
 ```
 lsof  → node ... TCP 127.0.0.1:45501 (LISTEN)      # loopback only, not *:45501
 curl 127.0.0.1:45501  → HTTP 201                    # served
-curl 192.168.86.28:45501 → refused (HTTP 000)       # LAN path gone
+curl 192.168.0.42:45501 → refused (HTTP 000)       # LAN path gone
 ```
 
 Plus two regression tests (S29 structural pin, S30 spawns the real server and
