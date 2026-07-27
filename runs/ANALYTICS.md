@@ -1,6 +1,6 @@
 # Pipeline Analytics — generated
 
-_Generated 2026-07-27T05:40:21Z. **Do not edit by hand** — regenerate with `node <playbook>/execution/analyze.mjs .` from the repo root._
+_Generated 2026-07-27T06:26:14Z. **Do not edit by hand** — regenerate with `node <playbook>/execution/analyze.mjs .` from the repo root._
 
 ## Fleet
 
@@ -14,6 +14,20 @@ _Generated 2026-07-27T05:40:21Z. **Do not edit by hand** — regenerate with `no
 |-----|------|--------|--------|-------|----------|--------|
 | greenfield | 2 | 10 | 947,185 | 223 | 1,000,000 | ✅ pass |
 | http-layer | 2 | 5 | 711,294 | 176 | 500,000 | ❌ over 211k |
+
+## DORA
+
+Per `PIPELINE_SLOS.md` § DORA mapping. **Only metrics the traces ground are reported** — anything without data says so.
+
+| Metric | Value | Basis |
+|--------|-------|-------|
+| Lead time (median) | 14.9h | intake → landed, 2/2 slices dated |
+| Deployment frequency | 14.0 slices/week | 2 landed over the traced span |
+| Change failure rate | 0% | 0 post-landing fixes + 0 reverts ÷ 2 landed |
+| Rework rate | 0.50 / slice | 1 stage retries + 0 post-landing fixes ÷ 2 landed |
+| Failed-deployment recovery time | **not captured** | needs blocked→unblocked timestamps in `STATE.md`; no run has recorded them |
+
+Per-slice lead time: greenfield 1.5h · http-layer 14.9h
 
 ## Density by archetype
 

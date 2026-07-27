@@ -42,19 +42,23 @@ function send(res, status, obj) {
   res.end(payload);
 }
 
-// Used only for the 413 path: write the response and confirm it has been
-// handed off to the socket BEFORE destroying anything. Never destroy first —
-// that would risk truncating a response that was never delivered (§2.1).
-function sendAndDestroy(req, res, status, obj) {
+// Used only for the 413 path: signal `Connection: close` and let Node close the
+// connection gracefully after the response. Do NOT destroy the socket.
+//
+// The earlier version wrote the response and then RST'd the socket. Because
+// HTTP/1.1 defaults to keep-alive, the 413 *advertised* a reusable connection
+// and then killed it — so a client that pooled it (browsers pool aggressively)
+// failed its NEXT, unrelated request with ECONNRESET. Announcing `close` tells
+// the client not to reuse the connection, which is what we actually mean.
+function sendAndClose(res, status, obj) {
   const payload = JSON.stringify(obj);
   res.writeHead(status, {
     "content-type": "application/json",
     "cache-control": "no-store",
     "content-length": Buffer.byteLength(payload),
+    connection: "close",
   });
-  res.end(payload, () => {
-    req.destroy();
-  });
+  res.end(payload);
 }
 
 // Collect chunks in an array and decode ONCE with Buffer.concat (§2.1).
@@ -179,7 +183,7 @@ async function handleRequest(req, res, log) {
     bodyBuf = await readBodyCapped(req);
   } catch (err) {
     if (err && err.status === 413) {
-      sendAndDestroy(req, res, 413, ERR.payloadTooLarge);
+      sendAndClose(res, 413, ERR.payloadTooLarge);
       finish(413);
     } else {
       // Client/stream error (e.g. aborted mid-upload) — best-effort cleanup;

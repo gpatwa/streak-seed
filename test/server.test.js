@@ -1,5 +1,6 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
+import http from "node:http";
 import { readFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -704,3 +705,63 @@ test("S30: node src/server.js (the real entry point) is reachable via 127.0.0.1 
     child.kill();
   }
 });
+
+// ── 413 keep-alive (carried from runs/http-layer/04-security.md) ───────────
+// The 413 used to advertise keep-alive and then RST the socket, breaking the
+// client's NEXT, unrelated request on a pooled connection. It must announce
+// `Connection: close` so the client never reuses it. Uses node:http only —
+// this repo is dependency-free.
+
+const rawRequest = (agent, path, method, body) =>
+  new Promise((resolve, reject) => {
+    const u = new URL(base);
+    const req = http.request(
+      {
+        hostname: u.hostname,
+        port: u.port,
+        path,
+        method,
+        agent,
+        headers: {
+          "X-User-Id": "u1",
+          "content-type": "application/json",
+          ...(body ? { "content-length": Buffer.byteLength(body) } : {}),
+        },
+      },
+      (res) => {
+        let data = "";
+        res.on("data", (c) => (data += c));
+        res.on("end", () => resolve({ status: res.statusCode, headers: res.headers, body: data }));
+      },
+    );
+    req.on("error", reject);
+    if (body) req.write(body);
+    req.end();
+  });
+
+test("S31: 413 announces Connection: close even when the client asked to keep alive", async () => {
+  // keepAlive:true is load-bearing: with keepAlive:false the CLIENT sends
+  // `Connection: close` and Node echoes it back, so this would pass even
+  // without the fix. The client must request reuse for the assertion to bite.
+  const agent = new http.Agent({ keepAlive: true, maxSockets: 1 });
+  try {
+    const res = await rawRequest(agent, "/habits", "POST", JSON.stringify({ name: "x".repeat(20_000) }))
+      .catch((e) => ({ error: e }));
+    assert.ok(!res.error, `413 response must arrive, got ${res.error}`);
+    assert.equal(res.status, 413);
+    assert.equal(
+      res.headers.connection,
+      "close",
+      "a 413 that advertises keep-alive and then drops the socket breaks the client's next request",
+    );
+    assert.deepEqual(JSON.parse(res.body), { error: "payload too large" });
+  } finally {
+    agent.destroy();
+  }
+});
+
+// NOTE: there is deliberately no test asserting "the next pooled request still
+// succeeds". Node's http.Agent transparently replaces a dead socket, so such a
+// test passes with or without the fix — a vacuous guard, which RUN_ECONOMICS
+// §7 says is worse than none. The `Connection: close` assertion above is the
+// real, deterministic guard: it is what stops the client reusing the socket.
