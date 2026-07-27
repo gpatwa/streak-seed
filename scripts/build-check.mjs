@@ -1,10 +1,11 @@
 // Build check: every shipped module must import cleanly. The repo is
 // dependency-free, so "build" = prove each module loads without a runtime
-// error.
+// error (server.js is import-safe: it only listens when run directly).
 const modules = [
   "../src/services/streak.js",
   "../src/services/habits.js",
   "../src/services/audit.js",
+  "../src/server.js",
 ];
 
 for (const m of modules) {

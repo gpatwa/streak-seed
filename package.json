@@ -9,6 +9,7 @@
     "test": "node --test",
     "build": "node scripts/build-check.mjs",
     "qa:mvp": "npm run typecheck && npm run test",
-    "start": "node scripts/demo.mjs"
+    "start": "node src/server.js",
+    "demo": "node scripts/demo.mjs"
   }
 }

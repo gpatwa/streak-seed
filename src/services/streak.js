@@ -4,11 +4,34 @@
 // testable with pinned indices and zero store setup. See runs/greenfield/05-arch.md §3.
 
 const MS_PER_DAY = 86_400_000;
+const MAX_TIME = 8_640_000_000_000_000; // ECMA-262 max representable time value
 
-/** UTC day-index: whole UTC days since 1970-01-01. Same UTC calendar day → same int. */
+/**
+ * UTC day-index: whole UTC days since 1970-01-01. Same UTC calendar day → same int.
+ * Clock guard (runs/http-layer/01-arch.md §2.5, carried from
+ * runs/greenfield/08-security.md §4): the single funnel every caller's clock
+ * passes through, so it is the one place a bad `now` can be rejected BEFORE
+ * any caller mutates a completion Set.
+ * @throws {TypeError} if `now` is not a valid, representable date/epoch-ms.
+ */
 export function dayIndex(now = Date.now()) {
-  const ms = now instanceof Date ? now.getTime() : now;
-  return Math.floor(ms / MS_PER_DAY);
+  // 1. Type gate FIRST — null/true/"" coerce to 0 and would silently mean 1970-01-01.
+  const isDate = now instanceof Date;
+  if (!isDate && typeof now !== "number") {
+    throw new TypeError("now must be a valid date or epoch-ms");
+  }
+  const ms = isDate ? now.getTime() : now;
+  // 2. NaN (invalid Date, incl. new Date(1e300)) and ±Infinity.
+  // 3. Finite but outside Date's representable range (8.64e18, 1e300, 8.64e15+1000).
+  if (!Number.isFinite(ms) || Math.abs(ms) > MAX_TIME) {
+    throw new TypeError("now must be a valid date or epoch-ms");
+  }
+  const idx = Math.floor(ms / MS_PER_DAY);
+  // 4. Executable postcondition: isoDateUTC(idx) is now total. Unreachable given (3).
+  if (!Number.isFinite(new Date(idx * MS_PER_DAY).getTime())) {
+    throw new TypeError("now must be a valid date or epoch-ms");
+  }
+  return idx;
 }
 
 /** Inverse, date-only: day-index -> "YYYY-MM-DD" (UTC). */

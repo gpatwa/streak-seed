@@ -1,18 +1,19 @@
 # Pipeline Analytics — generated
 
-_Generated 2026-07-26T18:39:50Z. **Do not edit by hand** — regenerate with `node <playbook>/execution/analyze.mjs .` from the repo root._
+_Generated 2026-07-27T05:40:21Z. **Do not edit by hand** — regenerate with `node <playbook>/execution/analyze.mjs .` from the repo root._
 
 ## Fleet
 
-- Runs traced: **1**
-- Stages: **10** · Tokens: **947,185** · Tool calls: **223**
-- Envelope breaches: **0/1** · Stage outliers: **0**
+- Runs traced: **2**
+- Stages: **15** · Tokens: **1,658,479** · Tool calls: **399**
+- Envelope breaches: **1/2** · Stage outliers: **2**
 
 ## Per run
 
 | Run | Tier | Stages | Tokens | Calls | Envelope | Status |
 |-----|------|--------|--------|-------|----------|--------|
 | greenfield | 2 | 10 | 947,185 | 223 | 1,000,000 | ✅ pass |
+| http-layer | 2 | 5 | 711,294 | 176 | 500,000 | ❌ over 211k |
 
 ## Density by archetype
 
@@ -21,8 +22,8 @@ Tokens per tool call, measured against each archetype's own cap.
 | Archetype | What it does | Cap | Observed (n) | Range | Avg |
 |-----------|--------------|-----|--------------|-------|-----|
 | **design** | reason → long artefact, few calls | 15,000 | 4 | 5,533–9,653 | 7,097 |
-| **review** | read artefacts → verdict | 8,000 | 4 | 3,654–5,177 | 4,424 |
-| **build** | heavy file / test I/O | 5,000 | 2 | 2,737–3,137 | 2,937 |
+| **review** | read artefacts → verdict | 8,000 | 6 | 3,654–5,177 | 4,485 |
+| **build** | heavy file / test I/O | 5,000 | 3 | 2,737–3,406 | 3,093 |
 
 ## Per stage
 
@@ -38,10 +39,16 @@ Tokens per tool call, measured against each archetype's own cap.
 | greenfield | Security | review | opus | 98,661 | 27 | 3,654 | 46% | — |
 | greenfield | Release | review | sonnet | 85,046 | 20 | 4,252 | 53% | — |
 | greenfield | Post-Launch | review | sonnet | 129,417 | 25 | 5,177 | 65% | — |
+| http-layer | Architecture | review | opus | 93,172 | 22 | 4,235 | 53% | — |
+| http-layer | Implementation | build | sonnet | 178,278 | 48 | 3,714 | 74% | ⚠ over cap |
+| http-layer | QA | build | sonnet | 178,029 | 43 | 4,140 | 83% | ⚠ over cap |
+| http-layer | Security | review | opus | 149,430 | 30 | 4,981 | 62% | — |
+| http-layer | Implementation rework | build | sonnet | 112,385 | 33 | 3,406 | 68% | — |
 
 ## Outliers
 
-None — every stage is within its token cap and its archetype's density cap.
+- **Implementation** (http-layer, build): 178,278 tok / 48 calls — 1.2× the 150k per-stage token cap
+- **QA** (http-layer, build): 178,029 tok / 43 calls — 1.2× the 150k per-stage token cap
 
 ## Baselines
 

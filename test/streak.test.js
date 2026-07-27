@@ -77,3 +77,65 @@ test("T12: dayIndex maps instants to a single UTC calendar day", () => {
   // isoDateUTC is the exact inverse (date-only) of dayIndex.
   assert.equal(isoDateUTC(dayIndex(startOfDay)), "2026-01-10");
 });
+
+// --- Clock guard (runs/http-layer/01-arch.md §2.5) ---
+// Carried precondition from runs/greenfield/08-security.md §4: a bad `now`
+// must throw a TypeError BEFORE any caller can mutate a completion Set.
+const MAX_TIME = 8_640_000_000_000_000; // ECMA-262 max representable time value
+
+test("C1: a pinned epoch-ms and its equivalent Date produce the same index (no behavior change for valid input)", () => {
+  const ms = Date.UTC(2026, 0, 10);
+  assert.equal(dayIndex(ms), dayIndex(new Date(ms)));
+});
+
+test('C2: dayIndex(new Date("garbage")) throws TypeError, not RangeError', () => {
+  assert.throws(() => dayIndex(new Date("garbage")), TypeError);
+});
+
+test("C3: dayIndex(new Date(1e300)) throws TypeError — the Invalid Date form", () => {
+  assert.throws(() => dayIndex(new Date(1e300)), TypeError);
+});
+
+test("C4: dayIndex(8.64e18) throws TypeError — finite-but-astronomical, defeats a naive finiteness-on-the-index check", () => {
+  // Math.floor(8.64e18 / 86_400_000) === 1e11, and Number.isFinite(1e11) is
+  // true — this is exactly the case a finiteness-only guard on the INDEX
+  // (rather than the input) would miss.
+  assert.equal(Number.isFinite(Math.floor(8.64e18 / 86_400_000)), true);
+  assert.throws(() => dayIndex(8.64e18), TypeError);
+});
+
+test("C5: dayIndex(1e300) throws TypeError — same class as C4, index ~1.16e292", () => {
+  assert.throws(() => dayIndex(1e300), TypeError);
+});
+
+test("C6: dayIndex succeeds at the exact representable bounds (±8.64e15 -> ±1e8)", () => {
+  assert.equal(dayIndex(MAX_TIME), 1e8);
+  assert.equal(dayIndex(-MAX_TIME), -1e8);
+});
+
+test("C7: dayIndex(8.64e15 + 1000) throws — the near-boundary epoch a round-trip-only guard would silently clamp to day 1e8", () => {
+  assert.throws(() => dayIndex(MAX_TIME + 1000), TypeError);
+});
+
+test("C8: Infinity, -Infinity, and NaN all throw", () => {
+  assert.throws(() => dayIndex(Infinity), TypeError);
+  assert.throws(() => dayIndex(-Infinity), TypeError);
+  assert.throws(() => dayIndex(NaN), TypeError);
+});
+
+test("C9: non-number/non-Date values throw instead of silently coercing to day 0 (1970-01-01)", () => {
+  for (const bad of [null, true, false, "2020-01-01", {}, []]) {
+    assert.throws(
+      () => dayIndex(bad),
+      TypeError,
+      `dayIndex(${JSON.stringify(bad)}) should throw instead of coercing`,
+    );
+  }
+});
+
+test("C10: postcondition sweep — isoDateUTC never throws on any index dayIndex can return", () => {
+  for (const now of [0, 1, -1, MAX_TIME, -MAX_TIME, Date.UTC(2026, 0, 10)]) {
+    const idx = dayIndex(now);
+    assert.doesNotThrow(() => isoDateUTC(idx));
+  }
+});

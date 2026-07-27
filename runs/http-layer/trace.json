@@ -1,0 +1,25 @@
+{
+  "schema": "agentic-sdlc/trace@1",
+  "slice": "http-layer",
+  "tier": 2,
+  "overlay": false,
+  "landed": true,
+  "started": "2026-07-26T04:00Z",
+  "stages": [
+    { "stage": "Architecture",   "model": "opus",   "tokens": 93172,  "toolCalls": 22, "retries": 0 },
+    { "stage": "Implementation", "model": "sonnet", "tokens": 178278, "toolCalls": 48, "retries": 0 },
+    { "stage": "QA",             "model": "sonnet", "tokens": 178029, "toolCalls": 43, "retries": 0 },
+    { "stage": "Security",       "model": "opus",   "tokens": 149430, "toolCalls": 30, "retries": 0 },
+    { "stage": "Implementation rework", "archetype": "build", "model": "sonnet", "tokens": 112385, "toolCalls": 33, "retries": 1 }
+  ],
+  "notes": {
+    "interruptedStages": [
+      { "stage": "Architecture (killed)", "tokens": 83849, "toolCalls": 13, "artefact": "none" },
+      { "stage": "Security re-gate (killed)", "tokens": 72507, "toolCalls": 24, "artefact": "none" }
+    ],
+    "interruptedTokens": 156356,
+    "totalIncludingWaste": 867650,
+    "orchestratorExecuted": ["Security re-gate (fact-check)", "Release", "Post-Launch"],
+    "comment": "Interrupted stages produced no artefact and are excluded from `stages` so density/archetype analytics stay meaningful; the spend is recorded here honestly. Release and the Security re-gate were executed directly by the Orchestrator per RUN_ECONOMICS.md (facts, not judgment) rather than spawned."
+  }
+}

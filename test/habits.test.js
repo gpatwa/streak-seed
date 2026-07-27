@@ -166,3 +166,58 @@ test("T11: input guards throw TypeError before any mutation or audit", () => {
   assert.equal(view.currentStreak, 0);
   assert.equal(listAuditEvents("u1").length, 0);
 });
+
+// --- Clock guard: pre-mutation proof (runs/http-layer/01-arch.md §2.5/§7 "H" cases) ---
+// The regression that matters: a bad clock must throw BEFORE touching a Set,
+// with zero collateral damage to any other habit for the same user.
+
+// H1 — invalid Date form.
+test("H1: a bad-clock log throws before mutation; a later valid log succeeds; no collateral damage to a second habit", () => {
+  resetAll();
+  const h1 = createHabit("u1", "Habit One");
+  const h2 = createHabit("u1", "Habit Two");
+
+  assert.throws(() => logCompletion("u1", h1.habitId, new Date("garbage")), TypeError);
+
+  // A subsequent valid log on the same habit still succeeds.
+  const result = logCompletion("u1", h1.habitId, NOW);
+  assert.equal(result.changed, true);
+  assert.equal(result.currentStreak, 1);
+
+  // listHabits returns BOTH habits — no partial mutation, no permanent
+  // corruption, no collateral damage to the untouched second habit.
+  const all = listHabits("u1", NOW);
+  assert.equal(all.length, 2);
+  const untouched = all.find((v) => v.habitId === h2.habitId);
+  assert.equal(untouched.currentStreak, 0);
+});
+
+// H2 — finite-but-astronomical form; identical assertions to H1.
+test("H2: dayIndex(8.64e18) via logCompletion throws before mutation, same as H1", () => {
+  resetAll();
+  const h1 = createHabit("u1", "Habit One");
+  const h2 = createHabit("u1", "Habit Two");
+
+  assert.throws(() => logCompletion("u1", h1.habitId, 8.64e18), TypeError);
+
+  const result = logCompletion("u1", h1.habitId, NOW);
+  assert.equal(result.changed, true);
+  assert.equal(result.currentStreak, 1);
+
+  const all = listHabits("u1", NOW);
+  assert.equal(all.length, 2);
+  const untouched = all.find((v) => v.habitId === h2.habitId);
+  assert.equal(untouched.currentStreak, 0);
+});
+
+// H3 — the read path (listHabits) throws too, and recovers on a valid call.
+test("H3: listHabits(u, 8.64e18) throws; a subsequent valid listHabits still returns everything", () => {
+  resetAll();
+  createHabit("u1", "Habit One");
+  createHabit("u1", "Habit Two");
+
+  assert.throws(() => listHabits("u1", 8.64e18), TypeError);
+
+  const all = listHabits("u1", NOW);
+  assert.equal(all.length, 2);
+});
