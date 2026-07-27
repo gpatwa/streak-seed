@@ -1,12 +1,12 @@
 # Pipeline Analytics — generated
 
-_Generated 2026-07-27T06:26:14Z. **Do not edit by hand** — regenerate with `node <playbook>/execution/analyze.mjs .` from the repo root._
+_Generated 2026-07-27T19:18:24Z. **Do not edit by hand** — regenerate with `node <playbook>/execution/analyze.mjs .` from the repo root._
 
 ## Fleet
 
-- Runs traced: **2**
-- Stages: **15** · Tokens: **1,658,479** · Tool calls: **399**
-- Envelope breaches: **1/2** · Stage outliers: **2**
+- Runs traced: **3**
+- Stages: **20** · Tokens: **2,313,010** · Tool calls: **674**
+- Envelope breaches: **2/3** · Stage outliers: **4**
 
 ## Per run
 
@@ -14,6 +14,7 @@ _Generated 2026-07-27T06:26:14Z. **Do not edit by hand** — regenerate with `no
 |-----|------|--------|--------|-------|----------|--------|
 | greenfield | 2 | 10 | 947,185 | 223 | 1,000,000 | ✅ pass |
 | http-layer | 2 | 5 | 711,294 | 176 | 500,000 | ❌ over 211k |
+| browser-client | 2 | 5 | 654,531 | 275 | 500,000 | ❌ over 155k |
 
 ## DORA
 
@@ -21,13 +22,13 @@ Per `PIPELINE_SLOS.md` § DORA mapping. **Only metrics the traces ground are rep
 
 | Metric | Value | Basis |
 |--------|-------|-------|
-| Lead time (median) | 14.9h | intake → landed, 2/2 slices dated |
-| Deployment frequency | 14.0 slices/week | 2 landed over the traced span |
-| Change failure rate | 0% | 0 post-landing fixes + 0 reverts ÷ 2 landed |
-| Rework rate | 0.50 / slice | 1 stage retries + 0 post-landing fixes ÷ 2 landed |
+| Lead time (median) | 1.5h | intake → landed, 3/3 slices dated |
+| Deployment frequency | 21.0 slices/week | 3 landed over the traced span |
+| Change failure rate | 0% | 0 post-landing fixes + 0 reverts ÷ 3 landed |
+| Rework rate | 0.67 / slice | 2 stage retries + 0 post-landing fixes ÷ 3 landed |
 | Failed-deployment recovery time | **not captured** | needs blocked→unblocked timestamps in `STATE.md`; no run has recorded them |
 
-Per-slice lead time: greenfield 1.5h · http-layer 14.9h
+Per-slice lead time: browser-client 1.2h · greenfield 1.5h · http-layer 14.9h
 
 ## Density by archetype
 
@@ -36,8 +37,8 @@ Tokens per tool call, measured against each archetype's own cap.
 | Archetype | What it does | Cap | Observed (n) | Range | Avg |
 |-----------|--------------|-----|--------------|-------|-----|
 | **design** | reason → long artefact, few calls | 15,000 | 4 | 5,533–9,653 | 7,097 |
-| **review** | read artefacts → verdict | 8,000 | 6 | 3,654–5,177 | 4,485 |
-| **build** | heavy file / test I/O | 5,000 | 3 | 2,737–3,406 | 3,093 |
+| **review** | read artefacts → verdict | 8,000 | 8 | 2,980–5,177 | 4,273 |
+| **build** | heavy file / test I/O | 5,000 | 4 | 1,997–3,406 | 2,819 |
 
 ## Per stage
 
@@ -58,11 +59,18 @@ Tokens per tool call, measured against each archetype's own cap.
 | http-layer | QA | build | sonnet | 178,029 | 43 | 4,140 | 83% | ⚠ over cap |
 | http-layer | Security | review | opus | 149,430 | 30 | 4,981 | 62% | — |
 | http-layer | Implementation rework | build | sonnet | 112,385 | 33 | 3,406 | 68% | — |
+| browser-client | Architecture | review | opus | 94,354 | 22 | 4,289 | 54% | — |
+| browser-client | Implementation | build | sonnet | 178,817 | 77 | 2,322 | 46% | ⚠ over cap |
+| browser-client | QA | build | sonnet | 157,301 | 83 | 1,895 | 38% | ⚠ over cap |
+| browser-client | Implementation rework | build | sonnet | 107,824 | 54 | 1,997 | 40% | — |
+| browser-client | Security | review | opus | 116,235 | 39 | 2,980 | 37% | — |
 
 ## Outliers
 
 - **Implementation** (http-layer, build): 178,278 tok / 48 calls — 1.2× the 150k per-stage token cap
 - **QA** (http-layer, build): 178,029 tok / 43 calls — 1.2× the 150k per-stage token cap
+- **Implementation** (browser-client, build): 178,817 tok / 77 calls — 1.2× the 150k per-stage token cap
+- **QA** (browser-client, build): 157,301 tok / 83 calls — 1.0× the 150k per-stage token cap
 
 ## Baselines
 

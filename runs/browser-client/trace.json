@@ -1,0 +1,29 @@
+{
+  "schema": "agentic-sdlc/trace@1",
+  "slice": "browser-client",
+  "tier": 2,
+  "overlay": false,
+  "landed": true,
+  "started": "2026-07-27T00:10Z",
+  "landedAt": "2026-07-27T01:20Z",
+  "postLandingFixes": 0,
+  "reverted": false,
+  "stages": [
+    { "stage": "Architecture",   "model": "opus",   "tokens": 94354,  "toolCalls": 22, "retries": 0 },
+    { "stage": "Implementation", "model": "sonnet", "tokens": 178817, "toolCalls": 77, "retries": 0 },
+    { "stage": "QA",             "model": "sonnet", "tokens": 157301, "toolCalls": 83, "retries": 0 },
+    { "stage": "Implementation rework", "archetype": "build", "model": "sonnet", "tokens": 107824, "toolCalls": 54, "retries": 1 },
+    { "stage": "Security",       "model": "opus",   "tokens": 116235, "toolCalls": 39, "retries": 0 }
+  ],
+  "notes": {
+    "budget": 550000,
+    "spent": 654531,
+    "overrunAuthorizedBy": "gpatwa (human), 2026-07-27",
+    "overrunReason": "QA failed the slice and forced a rework the four-stage estimate did not carry. Security was not droppable — this slice introduces the product's first XSS surface — so the Orchestrator stopped at the pre-spawn check and escalated with numbers rather than degrading or continuing.",
+    "recordedAs": "approved exception, NOT a raised budget — the 550k estimate stands so the miss stays visible",
+    "gatesThatFired": ["QA round 1: FAIL (focus lost after logging — live a11y defect)", "Budget: STOP AND ASK before Security"],
+    "orchestratorExecuted": ["Release", "Post-Launch"],
+    "leastPrivilegeEnforced": false,
+    "leastPrivilegeNote": "Orchestrator session was rooted in the playbook, so streak-seed/.claude/agents was not discoverable; stages ran as general-purpose agents with briefs inlined and full tools. Recorded per the pack CLAUDE.md."
+  }
+}

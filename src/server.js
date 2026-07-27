@@ -7,10 +7,72 @@
 // a route TEMPLATE only — never a raw path, query string, or habit name
 // (§6). See runs/http-layer/01-arch.md.
 import http from "node:http";
+import { readFileSync } from "node:fs";
 import { createHabit, listHabits, logCompletion } from "./services/habits.js";
 
 const MAX_BODY_BYTES = 8_192; // 8 KiB — ~10x the largest legitimate body (a 200-char name)
 const COMPLETIONS_RE = /^\/habits\/([^/]+)\/completions$/;
+
+// --- Static client (runs/browser-client/01-arch.md §1) --------------------
+//
+// A frozen allowlist, not a filesystem path: the route table is an explicit
+// map from request pathname -> asset. No pathname is ever joined onto a
+// directory, so there is no path-traversal surface to defend — /../../etc,
+// %2e%2e%2f, and a trailing NUL all miss the map and fall through to the
+// existing (unmatched) 404. The absence of path.join is the control.
+//
+// The KEY is also the route template used for access logging (§1.4): every
+// key is a literal in this file, never request-derived text.
+const CLIENT_DIR = new URL("./client/", import.meta.url);
+
+export const STATIC = Object.freeze({
+  "/": { file: "index.html", type: "text/html; charset=utf-8" },
+  "/app.css": { file: "app.css", type: "text/css; charset=utf-8" },
+  "/boot.js": { file: "boot.js", type: "text/javascript; charset=utf-8" },
+  "/app.js": { file: "app.js", type: "text/javascript; charset=utf-8" },
+  "/render.js": { file: "render.js", type: "text/javascript; charset=utf-8" },
+  "/dom.js": { file: "dom.js", type: "text/javascript; charset=utf-8" },
+  "/copy.js": { file: "copy.js", type: "text/javascript; charset=utf-8" },
+});
+
+// CSP on the HTML document only (§1.4, §3.6): default-src 'none' forces every
+// script and stylesheet into its own file, so no inline <script>, no inline
+// <style>, no inline on*= handler can execute even if one somehow reached
+// the parser. Second, independent layer behind "the client never constructs
+// markup from data" (§3.1).
+const HTML_CSP =
+  "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; " +
+  "img-src 'none'; font-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+
+// Read once at import (§1.2): request handling stays pure — no per-request
+// filesystem call, no fs error path inside handleRequest. A missing or
+// unreadable asset fails at IMPORT time, which is exactly what `npm run
+// build` (scripts/build-check.mjs) exists to catch.
+const STATIC_ASSETS = new Map(
+  Object.entries(STATIC).map(([pathname, { file, type }]) => {
+    const body = readFileSync(new URL(file, CLIENT_DIR));
+    return [
+      pathname,
+      Object.freeze({
+        body,
+        type,
+        length: body.length,
+        ...(pathname === "/" ? { csp: HTML_CSP } : {}),
+      }),
+    ];
+  }),
+);
+
+function sendStatic(res, asset) {
+  res.writeHead(200, {
+    "content-type": asset.type,
+    "content-length": asset.length,
+    "cache-control": "no-store",
+    "x-content-type-options": "nosniff",
+    ...(asset.csp ? { "content-security-policy": asset.csp } : {}),
+  });
+  res.end(asset.body);
+}
 
 // Closed error-phrase set (§2.6). Each is a single frozen object referenced
 // from exactly one call site below, so a given failure is byte-identical no
@@ -157,6 +219,9 @@ async function handleRequest(req, res, log) {
   if (method === "GET" && pathname === "/health") {
     routeTemplate = "/health";
     matched = "health";
+  } else if (method === "GET" && Object.hasOwn(STATIC, pathname)) {
+    routeTemplate = pathname; // a literal key of the frozen STATIC table
+    matched = "static";
   } else if (method === "POST" && pathname === "/habits") {
     routeTemplate = "/habits";
     matched = "createHabit";
@@ -222,6 +287,15 @@ async function handleRequest(req, res, log) {
     if (matched === "health") {
       // No X-User-Id required — this route carries no user data.
       send(res, 200, { status: "ok" });
+      finish(200);
+      return;
+    }
+
+    if (matched === "static") {
+      // No X-User-Id required — static assets are byte-identical for every
+      // user and carry no user data, same carve-out as /health (§1.3).
+      const asset = STATIC_ASSETS.get(pathname);
+      sendStatic(res, asset);
       finish(200);
       return;
     }

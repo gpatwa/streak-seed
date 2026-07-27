@@ -502,7 +502,16 @@ test("S24: habit names never reach the log sink, on any route including error pa
     headers: { "x-user-id": "u-s24" },
   }); // a name used AS an id
 
-  const templateRe = /^(GET|POST) (\/health|\/habits|\/habits\/:habitId\/completions|\(unmatched\)) \d{3} \d+ms$/;
+  // Widened for the browser-client slice (runs/browser-client/01-arch.md
+  // §9.1): the seven new alternatives are literal keys of the frozen STATIC
+  // table in src/server.js — fixed string literals, not patterns, and they
+  // cannot match request-derived text. This is a widening, not a weakening:
+  // the property this test exists to prove — every log line is one of a
+  // closed set of templates, and no request data reaches a log line — is
+  // preserved intact. See test C18, which pins these seven literals against
+  // the STATIC table itself so the two cannot drift.
+  const templateRe =
+    /^(GET|POST) (\/health|\/habits|\/habits\/:habitId\/completions|\/|\/app\.css|\/boot\.js|\/app\.js|\/render\.js|\/dom\.js|\/copy\.js|\(unmatched\)) \d{3} \d+ms$/;
   assert.ok(logs.length > 0, "expected at least one log line to have been captured");
   for (const line of logs) {
     const trimmed = line.replace(/\n$/, "");
