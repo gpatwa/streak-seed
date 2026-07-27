@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/budget-guard.mjs",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
