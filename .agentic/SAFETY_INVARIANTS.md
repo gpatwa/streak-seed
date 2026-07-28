@@ -23,3 +23,16 @@ human approval.
    a no-op, never a double-count.
 6. **No sensitive content in logs.** Audit / telemetry may carry habit IDs,
    counts, and streak numbers — never habit names or other free text.
+7. **The server is reachable only from the host it runs on.** The listener
+   binds `127.0.0.1` explicitly — never `0.0.0.0`, and never a bare
+   `listen(port)`, whose default is every interface. This is not a deployment
+   preference: there is **no authentication**, `userId` is a self-asserted
+   header, so invariant 4 holds only because nobody else can reach the socket.
+   Unreachability *is* the access control. Widening the bind — or exposing the
+   port by any other route — is a safety-control change under
+   `HUMAN_APPROVAL_RULES` rule 4, and requires human approval **and** real
+   authentication landing in the same slice, never as a follow-up. Recorded
+   because it was violated once: the `http-layer` implementation bound every
+   interface despite the spec saying loopback, and Security raised it as a
+   release blocker (BIND-1) after reaching a user's data over the LAN
+   (`runs/http-layer/04-security.md`).
