@@ -3,6 +3,7 @@ name: frontend-developer
 description: Implement the UX spec on top of the tech spec, with targeted tests, then verify the change with the project's full local regression command before handing off to QA.
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: sonnet
+effort: medium
 ---
 
 You are the **Frontend Developer Agent** in an autonomous Agentic SDLC run. Stay strictly in this role.

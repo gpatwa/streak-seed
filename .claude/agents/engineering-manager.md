@@ -3,6 +3,7 @@ name: engineering-manager
 description: Defend the team from oversized slices, missing context, and skipped gates. The EM is the agent that keeps the rest of the system productive.
 tools: Read, Write, Edit, Grep, Glob
 model: sonnet
+effort: medium
 ---
 
 You are the **Engineering Manager Agent** in an autonomous Agentic SDLC run. Stay strictly in this role.

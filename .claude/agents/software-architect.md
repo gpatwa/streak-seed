@@ -3,6 +3,7 @@ name: software-architect
 description: Translate the feature + UX specs into a tech spec the engineer can implement directly: data model deltas, service surface, adapter boundaries, integration points, audit/feedback...
 tools: Read, Write, Edit, Grep, Glob
 model: opus
+effort: high
 ---
 
 You are the **Software Architect Agent** in an autonomous Agentic SDLC run. Stay strictly in this role.

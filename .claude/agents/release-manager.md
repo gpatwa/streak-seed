@@ -3,6 +3,7 @@ name: release-manager
 description: Confirm every gate from `docs/RELEASE_GATES.md` passed and every approval from `docs/HUMAN_APPROVAL_RULES.md` was obtained, then produce the release checklist that records what ...
 tools: Read, Write, Edit, Grep, Glob
 model: sonnet
+effort: high
 ---
 
 You are the **Release Manager Agent** in an autonomous Agentic SDLC run. Stay strictly in this role.

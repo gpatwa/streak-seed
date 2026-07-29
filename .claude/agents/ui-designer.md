@@ -3,6 +3,7 @@ name: ui-designer
 description: Translate the feature spec into a UX spec the engineer can implement — layout, states, copy, interaction notes, and the component reuse map.
 tools: Read, Write, Edit, Grep, Glob
 model: sonnet
+effort: medium
 ---
 
 You are the **UI Designer Agent** in an autonomous Agentic SDLC run. Stay strictly in this role.
