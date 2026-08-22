@@ -97,11 +97,58 @@ aggregate across runs without parsing markdown. STATE.md stays the human mirror;
 neither is hand-parsed for numbers.
 
 ```json
-{ "schema": "agentic-sdlc/trace@1", "slice": "<id>", "tier": 2,
+{ "schema": "agentic-sdlc/trace@2", "slice": "<id>", "tier": 2,
   "overlay": false, "landed": true, "started": "<UTC>",
-  "stages": [ { "stage": "<name>", "model": "<model>", "effort": "<level>",
+  "operator": "<who drove this run>",
+  "gateCatches": [ { "gate": "<QA|Security|...>", "verdict": "fail",
+                     "severity": "<blocker|required-fix|advisory>",
+                     "finding": "<one line: what it caught>" } ],
+  "stages": [ { "stage": "<name>", "executor": "subagent",
+               "model": "<model>", "effort": "<level>",
                "tokens": 0, "toolCalls": 0, "retries": 0 } ] }
 ```
+
+**`gateCatches`** records every defect a gate caught before it shipped — the
+closest thing this system can honestly produce to an *impact* number. A gate
+that fails a slice and sends it back is the pipeline earning its keep; counting
+those catches, by gate and severity, is how the qualitative evidence ("QA
+failed browser-client on a live a11y defect", "Security blocked the http-layer
+bind") becomes a metric. Omit the array when nothing was caught; a genuinely
+clean slice recording `[]` is different from an old run that never recorded it.
+
+Pre-schema runs logged gate activity only in prose or an ad-hoc
+`notes.gatesThatFired` array. `analyze.mjs` surfaces that legacy array too, so
+existing catches aren't lost, but it labels the total a **floor** — a run whose
+Security block lives only in its write-up cannot be counted structurally, so the
+number under-reports until every run emits `gateCatches`.
+
+**`operator`** names the human who drove the run. A stage may carry its own
+`operator` when a different person drove that stage; otherwise it inherits the
+slice's.
+
+Recorded now, while it is one field on a young corpus, because attribution is
+painful to retrofit and impossible to reconstruct. Every run to date was driven
+by one person, so the field costs nothing today and is the prerequisite for
+anything multi-operator later — per-person budgets, slice ownership, or knowing
+who to ask about a run. `analyze.mjs` stays silent about it while a fleet has a
+single operator, and breaks figures out per operator once it has more.
+
+**`stages` must list every stage that ran** — including ones the Orchestrator
+executed itself rather than spawning. Mark those `"executor": "orchestrator"`;
+`model`, `effort`, `tokens`, and `toolCalls` may be omitted when there is no
+telemetry to report.
+
+This is what `trace@2` fixes. Under `trace@1`, `stages` in practice meant
+"stages spawned as subagents", and self-executed stages were dropped — or
+recorded in an ad-hoc `notes.orchestratorExecuted` array that no tool read and
+no schema described. Three of the first eight runs are in that state, so every
+cost, density, and DORA figure for them was computed over a partial list with
+nothing saying so.
+
+`analyze.mjs` accepts both schemas and reports untraced stages either way — old
+traces are run records and are not rewritten. What changes going forward is
+that the omission is **structural and visible** instead of ad-hoc and silent:
+a slice cost that excludes untraced stages is now reported as a floor.
 
 The Post-Launch agent regenerates `runs/ANALYTICS.md` + `runs/dashboard.html`
 from all traces via `execution/analyze.mjs` at slice close.
