@@ -1,6 +1,6 @@
 # Pipeline Analytics — generated
 
-_Generated 2026-08-08T06:40:04Z. **Do not edit by hand** — regenerate with `node <playbook>/execution/analyze.mjs .` from the repo root._
+_Generated 2026-08-22T18:38:40Z. **Do not edit by hand** — regenerate with `node <playbook>/execution/analyze.mjs .` from the repo root._
 
 ## Fleet
 
@@ -79,6 +79,16 @@ excludes them** — treat slice costs as a floor, not a total.
 | http-layer | Post-Launch | `notes.orchestratorExecuted` (trace@1) |
 | browser-client | Release | `notes.orchestratorExecuted` (trace@1) |
 | browser-client | Post-Launch | `notes.orchestratorExecuted` (trace@1) |
+
+## Gate catches
+
+Defects the gates caught before they shipped — the pipeline earning its keep.
+**A floor, not a total:** 3 run(s) predate the `gateCatches` field (browser-client, greenfield, http-layer) and recorded catches only in prose, so a real block — e.g. Security stopping the http-layer bind — is not counted here.
+
+**Legacy gate activity (unstructured, `notes.gatesThatFired`) — surfaced, not counted:**
+
+- browser-client: QA round 1: FAIL (focus lost after logging — live a11y defect)
+- browser-client: Budget: STOP AND ASK before Security
 
 ## Outliers
 
