@@ -168,3 +168,30 @@ test("C19: /health, GET|POST /habits, the completions 404 non-oracle, and the 41
   assert.equal(big.status, 413);
   assert.deepEqual(await big.json(), { error: "payload too large" });
 });
+
+// ---------------------------------------------------------------------------
+// C22 — F-3: the HTML CSP must require Trusted Types for scripts
+// (04-security.md §2.4)
+// ---------------------------------------------------------------------------
+
+test("C22: GET / serves a CSP containing require-trusted-types-for 'script'", async () => {
+  const res = await fetch(`${base}/`);
+  assert.equal(res.status, 200);
+  const csp = res.headers.get("content-security-policy");
+  assert.ok(csp, "expected a Content-Security-Policy header on GET /");
+  assert.ok(
+    csp.includes("require-trusted-types-for 'script'"),
+    `CSP missing require-trusted-types-for 'script': ${csp}`,
+  );
+  // No other directive changed and none was removed (non-goal: "no new CSP
+  // directives beyond F-3").
+  assert.ok(csp.includes("default-src 'none'"), `CSP missing default-src 'none': ${csp}`);
+  assert.ok(csp.includes("script-src 'self'"), `CSP missing script-src 'self': ${csp}`);
+  assert.ok(csp.includes("style-src 'self'"), `CSP missing style-src 'self': ${csp}`);
+  assert.ok(csp.includes("connect-src 'self'"), `CSP missing connect-src 'self': ${csp}`);
+  assert.ok(csp.includes("img-src 'none'"), `CSP missing img-src 'none': ${csp}`);
+  assert.ok(csp.includes("font-src 'none'"), `CSP missing font-src 'none': ${csp}`);
+  assert.ok(csp.includes("base-uri 'none'"), `CSP missing base-uri 'none': ${csp}`);
+  assert.ok(csp.includes("form-action 'none'"), `CSP missing form-action 'none': ${csp}`);
+  assert.ok(csp.includes("frame-ancestors 'none'"), `CSP missing frame-ancestors 'none': ${csp}`);
+});

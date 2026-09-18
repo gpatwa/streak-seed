@@ -15,6 +15,14 @@ const ALLOWED_PROPS = new Set([
   "aria-hidden", "aria-live", "aria-atomic", "aria-label", "href",
 ]);
 
+// Every literal tag the client's rendering pipeline emits — render.js's own
+// h() call sites, plus the two vnodes app.js builds inline ("p" for the
+// loading state, "ul" for the habit list). Derived by reading both files, not
+// guessed (04-security.md §1.4/§7.1); see 01-impl.md for the derivation. No
+// data-derived tag exists today, so nothing outside this set should ever
+// legitimately reach create().
+const ALLOWED_TAGS = new Set(["a", "button", "div", "h1", "h2", "li", "p", "span", "ul"]);
+
 function setProp(el, name, value) {
   if (name === "on") {
     for (const [ev, fn] of Object.entries(value)) {
@@ -25,21 +33,29 @@ function setProp(el, name, value) {
   }
   if (/^on/i.test(name)) throw new TypeError("event-handler attributes are not settable");
   if (!ALLOWED_PROPS.has(name)) throw new TypeError("attribute not allowed");
-  if (name === "href" && !String(value).startsWith("#/")) {
+  const v = String(value);
+  if (name === "href" && !v.startsWith("#/")) {
     throw new TypeError("href must be an in-app hash route");
   }
-  el.setAttribute(name, String(value));
+  el.setAttribute(name, v);
 }
 
 function create(vnode) {
-  const el = document.createElement(vnode.tag); // tag is always a literal from render.js
+  const tag = vnode.tag;
+  if (typeof tag !== "string" || !ALLOWED_TAGS.has(tag)) {
+    throw new TypeError("tag not allowed");
+  }
+  const el = document.createElement(tag);
   for (const [k, v] of Object.entries(vnode.props ?? {})) setProp(el, k, v);
   for (const child of vnode.children ?? []) {
-    el.appendChild(
-      typeof child === "string"
-        ? document.createTextNode(child) // <- EVERY untrusted string, always
-        : create(child),
-    );
+    if (typeof child === "string") {
+      el.appendChild(document.createTextNode(child)); // <- EVERY untrusted string, always
+      continue;
+    }
+    if (child === null || Array.isArray(child) || typeof child !== "object") {
+      throw new TypeError("child must be a string or a vnode");
+    }
+    el.appendChild(create(child));
   }
   return el;
 }

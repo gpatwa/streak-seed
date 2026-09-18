@@ -258,6 +258,150 @@ test("C14: on:{click:fn} calls addEventListener; on:{click:'alert(1)'} throws", 
 });
 
 // ---------------------------------------------------------------------------
+// C20 — F-1: setProp must stringify href exactly once (04-security.md §1.3)
+// ---------------------------------------------------------------------------
+
+test("C20: a stateful toString cannot defeat the href guard — setProp must validate and set the same stringification", () => {
+  const { doc, calls } = makeStubDocument();
+  globalThis.document = doc;
+
+  // First call() (the guard's String(value)) returns a permitted "#/" value;
+  // every subsequent call() (a second, independent String(value) at the
+  // set site) returns a hostile javascript: URL. If setProp stringifies
+  // twice, the guard validates the safe first value and then delivers the
+  // hostile second one to setAttribute with no exception at all — the bug is
+  // a silent bypass, not a different throw.
+  let toStringCalls = 0;
+  const hostileHref = {
+    toString() {
+      toStringCalls += 1;
+      return toStringCalls === 1 ? "#/ok" : "javascript:alert(1)";
+    },
+  };
+
+  mount(doc.getElementById("app"), { tag: "a", props: { href: hostileHref }, children: [] });
+
+  const hrefCalls = calls.setAttribute.filter((c) => c.name === "href");
+  assert.equal(hrefCalls.length, 1, "expected exactly one setAttribute('href', ...) call");
+  assert.equal(
+    hrefCalls[0].value,
+    "#/ok",
+    "setProp must set the SAME stringification it validated — a stateful toString must not be able to deliver a second, hostile value",
+  );
+});
+
+// ---------------------------------------------------------------------------
+// C21c — F-5: create() must read vnode.tag exactly once — validate and
+// construct from the SAME binding, not three independent property reads
+// (03-security.md §3, the F-2 analogue of C20)
+// ---------------------------------------------------------------------------
+
+test("C21c: a stateful tag getter cannot defeat the tag allowlist — create() must validate and construct the same read", () => {
+  const { doc, calls } = makeStubDocument();
+  globalThis.document = doc;
+
+  // Reads 1-2 (the pre-fix code's `typeof` and `Set.has` checks) return an
+  // allowlisted value; any read past that returns "script" — the exact
+  // shape 03-security.md §3 reproduced against the unfixed create(): the
+  // validation reads see "div", the construction read sees "script". If
+  // create() reads vnode.tag more than the one time the fix allows, this
+  // getter delivers a silent bypass, not a different throw. The load-bearing
+  // assertion is the read COUNT, not just the outcome: create() must read
+  // `tag` exactly once, which is a stronger guarantee than "no <script> was
+  // built this time".
+  let tagReads = 0;
+  const hostileVnode = {
+    get tag() {
+      tagReads += 1;
+      return tagReads <= 2 ? "div" : "script";
+    },
+    props: {},
+    children: [],
+  };
+
+  // With the fix, only ONE read happens — the getter's first return, "div",
+  // is a legitimate allowlisted tag, so the correct, secure behaviour here
+  // is a plain successful construction of a <div>, not a throw. Throwing
+  // would be wrong: the single value read genuinely is allowlisted. Against
+  // the pre-fix create() this getter constructs a <script> instead, from a
+  // later, unvalidated read — silently, with no exception at all — which is
+  // exactly the failure 03-security.md §3 reproduced.
+  assert.doesNotThrow(() => {
+    mount(doc.getElementById("app"), hostileVnode);
+  }, "expected create() to succeed, constructing the single validated tag");
+
+  assert.equal(tagReads, 1, "expected create() to read vnode.tag exactly once");
+  assert.deepEqual(
+    calls.createElement,
+    ["div"],
+    "expected create() to construct only the validated tag ('div'), from the same read — never a forbidden tag from a later, independent read",
+  );
+});
+
+// ---------------------------------------------------------------------------
+// C21 — F-2: create() must validate vnode.tag against an allowlist, and
+// reject malformed children (04-security.md §1.4 / §7.1)
+// ---------------------------------------------------------------------------
+
+test("C21: create() throws for a constructible-but-forbidden tag, and still constructs every tag render.js/app.js legitimately emit", () => {
+  const { doc } = makeStubDocument();
+  globalThis.document = doc;
+
+  // Constructible in a real DOM (createElement would happily accept these)
+  // but never emitted anywhere in this client — exactly the tags 04-security.md
+  // §1.4 constructed against the unvalidated create().
+  const forbidden = ["script", "iframe", "object", "embed", "base", "link", "meta", "style"];
+  for (const tag of forbidden) {
+    assert.throws(
+      () => {
+        mount(doc.getElementById("app"), { tag, props: {}, children: [] });
+      },
+      TypeError,
+      `expected create() to reject tag "${tag}"`,
+    );
+  }
+
+  // Every tag the pipeline actually emits (render.js + the two inline
+  // vnodes app.js builds directly) must still construct without error.
+  const legitimate = ["a", "button", "div", "h1", "h2", "li", "p", "span", "ul"];
+  for (const tag of legitimate) {
+    assert.doesNotThrow(() => {
+      mount(doc.getElementById("app"), { tag, props: {}, children: [] });
+    }, `expected create() to still accept legitimate tag "${tag}"`);
+  }
+});
+
+test("C21b: create() rejects a malformed child (not a string, not a well-formed vnode) while still failing closed on null/number/array children", () => {
+  const { doc } = makeStubDocument();
+  globalThis.document = doc;
+
+  // A malformed child: an object with no .tag at all.
+  assert.throws(() => {
+    mount(doc.getElementById("app"), { tag: "div", props: {}, children: [{ not: "a vnode" }] });
+  }, TypeError, "expected create() to reject a childless-tag object as a malformed child");
+
+  // A malformed child: a vnode-shaped object whose tag is not allowlisted.
+  assert.throws(() => {
+    mount(doc.getElementById("app"), {
+      tag: "div",
+      props: {},
+      children: [{ tag: "script", props: {}, children: [] }],
+    });
+  }, TypeError, "expected create() to reject a child vnode with a forbidden tag");
+
+  // Existing fail-closed behaviour must survive: null/number/array children
+  // still throw loudly rather than rendering silently.
+  for (const badChild of [null, 42, []]) {
+    assert.throws(
+      () => {
+        mount(doc.getElementById("app"), { tag: "div", props: {}, children: [badChild] });
+      },
+      `expected create() to still throw for a ${JSON.stringify(badChild)} child`,
+    );
+  }
+});
+
+// ---------------------------------------------------------------------------
 // setText / byId — the same text-node path, and the one permitted document
 // lookup.
 // ---------------------------------------------------------------------------

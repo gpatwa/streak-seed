@@ -774,3 +774,33 @@ test("S31: 413 announces Connection: close even when the client asked to keep al
 // test passes with or without the fix — a vacuous guard, which RUN_ECONOMICS
 // §7 says is worse than none. The `Connection: close` assertion above is the
 // real, deterministic guard: it is what stops the client reusing the socket.
+
+// ---------------------------------------------------------------------------
+// S32 — F-4: JSON responses must carry nosniff + charset (04-security.md §3.1)
+// ---------------------------------------------------------------------------
+
+test("S32: send() JSON responses carry x-content-type-options: nosniff and a charset=utf-8 content-type", async () => {
+  resetAll();
+  const res = await fetch(`${base}/habits`, {
+    method: "POST",
+    headers: { "x-user-id": "u-s32" },
+    body: JSON.stringify({ name: "Read" }),
+  });
+  assert.equal(res.status, 201, "must not change any status code");
+  assert.equal(res.headers.get("content-type"), "application/json; charset=utf-8");
+  assert.equal(res.headers.get("x-content-type-options"), "nosniff");
+  const body = await res.json();
+  assert.ok(body.habit, "must not change the response body shape");
+});
+
+test("S32b: sendAndClose() (the 413 path) also carries nosniff and a charset=utf-8 content-type", async () => {
+  const res = await fetch(`${base}/habits`, {
+    method: "POST",
+    headers: { "x-user-id": "u-s32b" },
+    body: "a".repeat(9000),
+  });
+  assert.equal(res.status, 413, "must not change any status code");
+  assert.equal(res.headers.get("content-type"), "application/json; charset=utf-8");
+  assert.equal(res.headers.get("x-content-type-options"), "nosniff");
+  assert.deepEqual(await res.json(), { error: "payload too large" }, "must not change the response body");
+});

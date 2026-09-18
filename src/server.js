@@ -42,7 +42,8 @@ export const STATIC = Object.freeze({
 // markup from data" (§3.1).
 const HTML_CSP =
   "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; " +
-  "img-src 'none'; font-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+  "img-src 'none'; font-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; " +
+  "require-trusted-types-for 'script'";
 
 // Read once at import (§1.2): request handling stays pure — no per-request
 // filesystem call, no fs error path inside handleRequest. A missing or
@@ -97,9 +98,10 @@ const HABIT_NOT_FOUND = Object.freeze({ error: "habit not found" });
 function send(res, status, obj) {
   const payload = JSON.stringify(obj);
   res.writeHead(status, {
-    "content-type": "application/json",
+    "content-type": "application/json; charset=utf-8",
     "cache-control": "no-store", // personal habit data must never be cached
     "content-length": Buffer.byteLength(payload),
+    "x-content-type-options": "nosniff",
   });
   res.end(payload);
 }
@@ -115,9 +117,10 @@ function send(res, status, obj) {
 function sendAndClose(res, status, obj) {
   const payload = JSON.stringify(obj);
   res.writeHead(status, {
-    "content-type": "application/json",
+    "content-type": "application/json; charset=utf-8",
     "cache-control": "no-store",
     "content-length": Buffer.byteLength(payload),
+    "x-content-type-options": "nosniff",
     connection: "close",
   });
   res.end(payload);
