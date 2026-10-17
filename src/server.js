@@ -10,6 +10,12 @@ import http from "node:http";
 import { readFileSync } from "node:fs";
 import { createHabit, listHabits, logCompletion } from "./services/habits.js";
 
+// Read once at module load, never per request. package.json is the build's
+// own manifest, not user content, so exposing its version leaks nothing (§6).
+const VERSION = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+).version;
+
 const MAX_BODY_BYTES = 8_192; // 8 KiB — ~10x the largest legitimate body (a 200-char name)
 const COMPLETIONS_RE = /^\/habits\/([^/]+)\/completions$/;
 
@@ -289,7 +295,7 @@ async function handleRequest(req, res, log) {
   try {
     if (matched === "health") {
       // No X-User-Id required — this route carries no user data.
-      send(res, 200, { status: "ok" });
+      send(res, 200, { status: "ok", version: VERSION });
       finish(200);
       return;
     }

@@ -42,10 +42,17 @@ async function createHabitHttp(userId, name) {
 // Happy paths
 // ---------------------------------------------------------------------------
 
-test("S1: GET /health -> 200 {status:ok}, no X-User-Id required", async () => {
+test("S1: GET /health -> 200 status ok, no X-User-Id required", async () => {
   const res = await fetch(`${base}/health`);
   assert.equal(res.status, 200);
-  assert.deepEqual(await res.json(), { status: "ok" });
+  assert.equal((await res.json()).status, "ok");
+});
+
+test("S1b: GET /health -> exact {status, version} where version is package.json's, no X-User-Id", async () => {
+  const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+  const res = await fetch(`${base}/health`);
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { status: "ok", version: pkg.version });
 });
 
 test("S2: POST /habits -> 201, zeroed HabitView, name stored trimmed", async () => {

@@ -133,7 +133,7 @@ test("C19: /health, GET|POST /habits, the completions 404 non-oracle, and the 41
 
   const health = await fetch(`${base}/health`);
   assert.equal(health.status, 200);
-  assert.deepEqual(await health.json(), { status: "ok" });
+  assert.equal((await health.json()).status, "ok");
 
   const created = await fetch(`${base}/habits`, {
     method: "POST",
