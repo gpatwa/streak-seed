@@ -13,6 +13,11 @@ the originating conversation.
 - Never advance `Current stage` past a stage whose gate hasn't passed.
 - Never advance past an open approval (see `APPROVAL_PROTOCOL.md`).
 - Artefacts are referenced by path, never inlined.
+- `Status` is exactly one of the four template values, and the Budget block's
+  `Budget`, `Spent` and `Next stage` lines keep their template format. The
+  pre-spawn budget hook parses them; anything else — a reason, a split's
+  per-slice figures — goes in a note beneath. A slice it cannot parse is
+  checked by no one, and the hook can only say so.
 - Alongside `STATE.md`, emit `runs/<slice-id>/trace.json` — machine-readable
   telemetry mirroring the Trace table (see "Machine-readable trace").
 
@@ -26,12 +31,16 @@ the originating conversation.
 - **Release tier:** <1 / 2 / 3 / TBD>
 - **Current stage:** <stage name>
 - **Status:** <in-progress / blocked-on-approval / blocked-on-failure / done>
+- **Least-privilege:** <enforced / declared> — see "Least-privilege tier" below
+- **Telemetry:** <otel / self-reported> — see `TELEMETRY.md`
+- **Charter:** <none / runs/<slice-id>/CHARTER.md, sha256 <hash>, approved in APPROVAL_RECORD-1> — see `APPROVAL_PROTOCOL.md` "A run under a Charter"
 - **Started:** <UTC>  ·  **Updated:** <UTC>
 
 ## Stages
 
 | Stage | Owner | Status | Artefact | Gate |
 |-------|-------|--------|----------|------|
+| Intent | Human (Orchestrator drafts if given a one-liner) | confirmed | runs/<id>/intent.md | human confirms |
 | Intake | Orchestrator | done | runs/<id>/00-slice-plan.md | n/a |
 | Scope | Engineering Manager | in-progress | — | — |
 | ... | ... | pending | — | — |
@@ -75,19 +84,36 @@ One row per stage attempt — this is the pipeline's telemetry. Fill Tokens /
 Tool calls from the harness's usage stats where available; wall-clock
 always. Totals row = the slice's run cost. Feeds `PIPELINE_SLOS.md`.
 
+**Model comes from the harness log, never from memory.** After each stage,
+run `node <playbook>/execution/usage.mjs <product-repo> --slice <id>` and copy
+that spawn's `model` — what the harness logged for every request it made. A
+Trace filled from recall has recorded an Opus stage as Sonnet. If the log
+cannot be read, write the model the agent's frontmatter (or your spawn
+override) set, followed by `(declared)`. Every spawn the report lists gets a
+row, including ones you consider minor.
+
 | Stage | Model | Effort | Start (UTC) | End (UTC) | Wall | Tokens | Tool calls | Retry # |
 |-------|-------|--------|-------------|-----------|------|--------|------------|---------|
 | <stage> | <model> | <effort> | <ts> | <ts> | <m:ss> | <n> | <n> | 0 |
 | **Total** | | | | | | <Σ> | <Σ> | |
 
 Record the effort the stage **actually ran at**, not the frontmatter
-default — tier and failure escalation both move it (`MODEL_ROUTING.md`).
+default — tier and failure escalation both move it (`MODEL_ROUTING.md`). The
+harness log does not record effort, so this column is always declared: the
+frontmatter value, or the override you passed at spawn.
 Without this column a routing change cannot be evaluated after the fact.
 
 ## Next action
 
 <one line: the very next thing to do — what a resuming session executes>
 ```
+
+**Keep `Next action` and the Budget block's `Next stage` saying the same
+thing.** A stale `Next action` is read by the next session that resumes, and
+one reference-app slice left it naming a stage three stages old. Update both in
+the same edit. Set `Spent` from `execution/usage.mjs` after every stage, not
+only when the run stops: the figure recorded from memory ran 29k to 40k behind
+the measured one in two slices.
 
 ## Machine-readable trace
 
@@ -100,9 +126,20 @@ neither is hand-parsed for numbers.
 { "schema": "agentic-sdlc/trace@2", "slice": "<id>", "tier": 2,
   "overlay": false, "landed": true, "started": "<UTC>",
   "operator": "<who drove this run>",
+  "leastPrivilegeEnforced": true,
+  "leastPrivilegeNote": "<why — which tier, and what made it so>",
+  "telemetrySource": "<otel | self-reported>",
+  "approvals": [ { "action": "<what was approved>",
+                   "rule": "<HUMAN_APPROVAL_RULES rule #, or why it was gated>",
+                   "decision": "<approved|denied>",
+                   "approver": "<the named person — never a role>",
+                   "requestedAt": "<UTC>", "decidedAt": "<UTC>",
+                   "record": "<path or URL to the durable record>" } ],
   "gateCatches": [ { "gate": "<QA|Security|...>", "verdict": "fail",
                      "severity": "<blocker|required-fix|advisory>",
-                     "finding": "<one line: what it caught>" } ],
+                     "finding": "<one line: what it caught>",
+                     "detectedAt": "<UTC, optional>",
+                     "resolvedAt": "<UTC, optional>" } ],
   "stages": [ { "stage": "<name>", "executor": "subagent",
                "model": "<model>", "effort": "<level>",
                "tokens": 0, "toolCalls": 0, "retries": 0 } ] }
@@ -121,6 +158,65 @@ Pre-schema runs logged gate activity only in prose or an ad-hoc
 existing catches aren't lost, but it labels the total a **floor** — a run whose
 Security block lives only in its write-up cannot be counted structurally, so the
 number under-reports until every run emits `gateCatches`.
+
+**`detectedAt` / `resolvedAt`** (optional, per catch) are the failing verdict's
+timestamp and the re-verified pass's timestamp — the blocked→unblocked window
+`PIPELINE_SLOS.md`'s DORA mapping calls Failed-Deployment Recovery Time. Fill
+them when both are known (the agent that raised the failing verdict records
+`detectedAt`; whichever stage re-verifies the fix records `resolvedAt`); omit
+both when the run predates this or the timestamps weren't captured live —
+`analyze.mjs` reports FDRT as "not captured" rather than estimating it from
+stage Start/End times, which span the wrong thing (a stage's own runtime, not
+how long the *slice* sat blocked across possibly several stages).
+
+**`leastPrivilegeEnforced` / `leastPrivilegeNote`** record which of
+`ADAPTERS.md`'s two tool-scoping satisfaction tiers held for the run
+(mirrored in prose by the STATE.md header line above). `true` (**enforced**)
+means every stage ran as a subagent generated into `.claude/agents/`, with
+the harness mechanically restricting its tools. `false` (**declared**) means
+at least one stage ran with its brief inlined into a general-purpose agent —
+no runtime tool restriction was in force, and the agent was relying on its
+own brief's stated boundary. `leastPrivilegeNote` is free text: which stages,
+and why (usually: which repo the Orchestrator session was rooted in).
+Neither value is a defect by itself; an **omitted** field is.
+
+Both fields were already real practice before they were a documented part of
+this schema — three runs across both product repos (`stash-seed`
+`saved-item-folders`, `streak-seed` `browser-client` and `security-hardening`)
+recorded them under `notes.leastPrivilegeEnforced` /
+`notes.leastPrivilegeNote`, on their own initiative, per the pack's `AGENTS.md`
+instruction to record the gap rather than let it pass silently. This section
+promotes them to top-level fields — the same move `gateCatches` made from
+`notes.gatesThatFired` — because a convention three-for-three runs already
+followed voluntarily belongs in the schema they were approximating, not
+in `notes` pretending to be undiscovered.
+
+**`approvals`** mirrors the STATE.md Approvals table in machine-readable form.
+It was the single most load-bearing thing in this system that existed *only* as
+prose: the named-approver claim is the centre of the whole accountability
+argument, and until now no tool could read it. `conformity.mjs` falls back to
+parsing STATE.md for runs written before this field, and labels those rows as
+unstructured — a fallback, not a substitute, because a markdown table cannot be
+checked for completeness. Record the **decision** verbatim (`approved`,
+`denied`, `deferred`) rather than collapsing everything to a boolean: a deferred
+item is evidence that scope was bounded deliberately, and is not an approval.
+`approver` is a person. A role there fails `HUMAN_APPROVAL_RULES.md` and is
+reported as a finding, because CC8.1 asks *who* and a team does not answer it.
+Where the approval also produced an independently verifiable event — a pull
+request review, a merge commit — put that in `record`: a reference someone else
+can check is worth more than anything this repository asserts about itself.
+
+**`telemetrySource`** records where this run's numbers came from — `otel` when
+the harness emitted them from the instrumentation layer, `self-reported` when
+the agent narrated its own `tokens` / `toolCalls` and those figures were used.
+The distinction matters because the schema is otherwise filled in by the party
+being measured, and a self-report in this repo has already been observed wrong.
+`TELEMETRY.md` carries the enablement config and the per-field provenance map;
+what belongs here is only which source held. Governance fields are unaffected —
+`gateCatches`, `landed`, `operator` and the approval records have no
+instrumentation equivalent, because a gate verdict is a judgement rather than a
+measurement. As with `leastPrivilegeEnforced`, neither value is a defect by
+itself; an omitted field is.
 
 **`operator`** names the human who drove the run. A stage may carry its own
 `operator` when a different person drove that stage; otherwise it inherits the

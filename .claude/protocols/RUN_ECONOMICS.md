@@ -26,11 +26,38 @@ actually at stake) turned on the pipeline itself.
 Measured across 27 real stages (`runs/*/trace.json`). Use these to estimate
 before spawning; re-derive them as data accumulates.
 
+> **These are peak context, not consumption (corrected 2026-09-25).** The
+> figures below came from each spawn's `totalTokens`, which is the context size
+> of the stage's *last* request. What a stage actually processes — every
+> request's tokens, summed — is typically **10–50× larger**, mostly cache reads.
+> `execution/usage.mjs` measures both from the harness's own logs: e.g. an
+> Implementation stage recorded here as ~118k processed 4.4M across 55
+> requests (~726k cost-weighted). The table is still a fair gauge of *context
+> pressure*, and the budget gate compares like with like, so it is not wrong
+> as a relative control — but it is not a measure of how much of a usage
+> window a slice burns. Read it as the former, never as the latter.
+
 | Archetype | Typical | Budget with | Worst seen |
 |-----------|---------|-------------|------------|
 | **design** (Market Research, PRD, UX, UI, AI Governance) | ~69k | **70k** | 77k |
 | **review** (Scope, Architecture, Security, Release, Post-Launch) | ~98k | **100k** | 149k |
 | **build** (Implementation, QA, AI Engineer) | ~129k | **130k** | 178k |
+
+> **Count the spawns, not the stages (added 2026-10-09).** A Release Gate is
+> three spawns (plan, QA run, Release Manager verdict) and ran 146k against a
+> 70k single-spawn estimate. An Architecture stage that proposes a model is
+> two passes (the spec, then the model facts) and ran 187k against 70k. A
+> baseline measurement with a parameter sweep ran 82k against 60k. Estimate
+> each spawn, and add a pass when the stage ends in a request to the human.
+>
+> **Review stages run far over a small estimate (added 2026-10-08, slice 4 of
+> the reference app).** A Security Review at adversarial depth peaked at 129k
+> against a 70k estimate; a Release Manager step that reads many artefacts
+> peaked at 59k against 15k. Estimate a review stage at **50–60k**, or at
+> **100–130k** if the intent asks for adversarial depth, and give it a tight
+> read list (the artefacts it must read, by name). The same slice planned
+> 400k and measured 581k: a small slice with a Security Review and a Release
+> Gate should be planned from these figures, not from a per-stage guess.
 
 A stage's cost is dominated by its **agentic loop**, not its output: ~4–5k per
 tool call, re-processing accumulated context each turn. So cost tracks *number
@@ -52,8 +79,23 @@ spent + estimate(next stage)  ≤  budget ?
   human** with the numbers. Raising the budget to fit the spend is the same
   anti-pattern `PIPELINE_SLOS.md` forbids for SLOs.
 
+The Claude Code adapter's pre-spawn hook runs this same check mechanically. It
+reads `Spent` and the **Next stage** line's `est.` from `STATE.md`, so update
+that line before every spawn: a stale estimate is checked against the wrong
+stage, and a missing one leaves only the `spent ≥ budget` backstop.
+
 Default budget = Σ estimates of planned stages, rounded up one stage's worth as
-headroom. A slice that needs more than **6 stages** or **~600k** is a signal the
+headroom.
+
+**Ceiling, asked once (added 2026-10-09).** At plan confirmation the
+Orchestrator proposes the plan total *and* a ceiling, and the human types the
+ceiling. Measured on two reference-app slices, whole slices ran 1.45× and
+about 1.25× their plans, and the overruns sat in the same stages every time, so
+the ceiling is about **1.5×** the plan when it contains an adversarial
+Security Review or a model proposal, about **1.3×** otherwise. Spend between
+the plan and the ceiling needs no question. A stop is for spend above the
+ceiling, a failed pre-registered check, or a gate that would be compressed;
+the stop-and-ask message leads with the numbers and the exact reply to type. A slice that needs more than **6 stages** or **~600k** is a signal the
 slice is too big — send it back to the EM before spending, not after.
 
 **Cost is a first-class gate.** A run that blows its budget is a failed run even
@@ -75,9 +117,19 @@ State the depth **explicitly in the brief**. The `http-layer` run got
 "go beyond the shipped tests" — nobody chose it, and a dependency-free local
 seed did not warrant 178k of QA.
 
-Degrading depth is a legitimate response to budget pressure. Degrading it to
-dodge a *finding* is not: if a stage at `standard` surfaces something that needs
-adversarial depth, escalate the depth and the budget, and record why.
+Degrading depth is a legitimate response to budget pressure for a depth the
+Orchestrator chose. Degrading it to dodge a *finding* is not: if a stage at
+`standard` surfaces something that needs adversarial depth, escalate the depth
+and the budget, and record why.
+
+**A depth the intent names binds (added 2026-10-09).** If the intent says a stage
+runs at a depth ("Security Review at adversarial depth"), the plan carries that
+depth, and lowering it later, including when the reason it was asked for seems to
+have gone away, is a stop-and-ask: a digest item with the numbers and the exact
+reply to type, answered in the human's own words and recorded in an approval
+record. One reference-app slice lowered Security from `adversarial` to `standard`
+after its model path stopped; the reasoning held, but only the Orchestrator's own
+plan recorded it, and the Release Manager had to list it as a deviation.
 
 ## 4. Incremental artefacts — no all-or-nothing work
 
