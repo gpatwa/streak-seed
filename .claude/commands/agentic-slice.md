@@ -48,13 +48,28 @@ Do this:
    run a **setup phase** first: build and dry-run every agent, skill, hook,
    permission rule and script the gated stages will need, and record each dry
    run in the plan's Prerequisites table. A gated stage never changes a
-   definition it then has to reload. Then draft `runs/<slice-id>/CHARTER.md`
+   definition it then has to reload. The setup phase also writes the Charter's
+   C6.P permission rules to `.claude/settings.local.json` (gitignored; never the
+   tracked `.claude/settings.json`, or they ship to `main`; only after the Charter
+   is approved, and only the exact rules it lists; delete the file after the pull
+   request is opened) and runs each allowed command
+   once, so no app permission prompt can interrupt a gated stage; a prompt
+   that appears anyway is a Charter miss, noted in `END_REVIEW.md`. Then draft `runs/<slice-id>/CHARTER.md`
    from the playbook's `templates/CHARTER_TEMPLATE.md`, run
    `node <playbook>/execution/charter-check.mjs runs/<slice-id>/CHARTER.md
    --plan runs/<slice-id>/00-slice-plan.md` until it passes, and show the human
    the intent, the plan and the Charter with its sha256, once. When the human
    approves the Charter by its hash, run every stage to the end without asking,
-   send a notice at each stage boundary, act on covered gated actions per
+   send a notice at each stage boundary (immediately before the release
+   stage, re-run `charter-check` and save its output to
+   `runs/<slice-id>/charter-check-output.txt` for the Release Manager, who has
+   no shell; and run the review layer in `.claude/protocols/CODE_REVIEW.md`: the
+   local `/code-review` skill at `high` effort on the slice's changes against
+   its base branch, the repo's `REVIEW.md` as its rules, the risk tier derived
+   from the diff, findings recorded in `runs/<slice-id>/code-review.md`. Never
+   use `--fix`: findings go to the role that wrote the code, three rounds at most,
+   then the Architect reconsiders. If the skill is not available, say so in
+   `code-review.md` and `END_REVIEW.md`; that is not a stop), act on covered gated actions per
    `APPROVAL_PROTOCOL.md` "A run under a Charter", stop only for the Charter's
    section 9, and finish with `END_REVIEW.md`. Without an approved Charter,
    step 5 below applies as written.
@@ -66,6 +81,8 @@ Do this:
    Otherwise run stages as subagents and keep the setup-phase rule, so no stage
    needs a session the human starts. Never ask the human to open a session
    during a Charter run; if one is truly needed, that is a Charter stop.
+   `END_REVIEW.md` also reports **questions asked of the human after the
+   Charter** (the target is 0) and the **spend against each stage's estimate**.
 5b. **Confirm intent and plan together, once.** Show the human both files.
    Nothing past Scope Review starts until they confirm. A line still marked
    (inferred) after confirmation is dropped, not kept — it never becomes an
