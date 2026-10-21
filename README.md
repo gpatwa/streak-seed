@@ -73,3 +73,7 @@ enforced structurally rather than by good intentions:
 The methodology lives in the
 [playbook](https://github.com/gpatwa/agentic-sdlc-playbook); the other reference
 app is [stash-seed](https://github.com/gpatwa/stash-seed).
+
+## License
+
+Licensed under the [Apache License, Version 2.0](LICENSE). See [NOTICE](NOTICE) for the copyright holder, the trademark note and, where relevant, third-party components.
