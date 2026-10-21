@@ -1,0 +1,25 @@
+# CI for StreakKeeper: the QA gate on every pull request and every push to main.
+# Dependency-free Node ESM, so there is no install step. Routine runs (Process v3)
+# may never change this file; it is the check their auto-merge waits on.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: QA gate (typecheck + tests)
+        run: npm run qa:mvp
+      - name: Build check
+        run: npm run build
