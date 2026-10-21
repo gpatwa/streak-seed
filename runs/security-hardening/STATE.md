@@ -4,7 +4,8 @@
 - **Project pack:** b2c-saas
 - **Release tier:** 2 (local; behavioural hardening, no external effect, no deploy, no push)
 - **Current stage:** Security re-verify done (**PASS**) → Release
-- **Status:** in-progress — **all gates green, no open finding, no open approval.** Route A rework verified independently by Security: `create()` reads `vnode.tag` exactly once, the three original F-5 exploits now all yield `created=[div]` with `tag reads: 1`, `props`/`children` confirmed single-read, and C21c re-derived fail-first (`3 !== 1`, `createElement=["script"]`) against a reconstructed three-read `create()`. `npm test` 91/91 and `npm run build` ok, re-run by Security. Ready for Tier 2 release.
+- **Status:** done
+- *Record corrected 2026-10-21 by the playbook session: the slice landed on `main` in `06e1668` ("Close F-1 through F-5"), but this line was left at in-progress. The last recorded note, kept verbatim:* **all gates green, no open finding, no open approval.** Route A rework verified independently by Security: `create()` reads `vnode.tag` exactly once, the three original F-5 exploits now all yield `created=[div]` with `tag reads: 1`, `props`/`children` confirmed single-read, and C21c re-derived fail-first (`3 !== 1`, `createElement=["script"]`) against a reconstructed three-read `create()`. `npm test` 91/91 and `npm run build` ok, re-run by Security. Ready for Tier 2 release.
 - **Started:** 2026-08-22T19:05Z  ·  **Updated:** 2026-08-22T22:20Z
 
 > **Least-privilege IS enforced for this run.** The Orchestrator session is rooted
